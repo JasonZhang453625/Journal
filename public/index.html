@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>远途札记 - 公共游记时间线</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="orb orb-a" aria-hidden="true"></div>
+  <div class="orb orb-b" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="eyebrow">PUBLIC TRAVEL LOG</p>
+        <h1>远途札记</h1>
+        <p>任何人都可以上传旅程，并汇入同一条公共时间线。</p>
+      </div>
+
+      <section class="filter-group">
+        <h2>按作者筛选</h2>
+        <div id="authorChips" class="chips"></div>
+      </section>
+
+      <section class="filter-group">
+        <h2>按相册筛选</h2>
+        <div id="albumList" class="album-list"></div>
+      </section>
+
+      <div class="sidebar-foot">
+        <p>卡片可评论</p>
+        <p>编辑需输入该记录的编辑密钥</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">TIMELINE</p>
+          <h2>公共时间线</h2>
+          <p id="heroMeta">加载中...</p>
+        </div>
+        <button id="openUploadBtn" class="btn btn-primary" type="button">上传我的记录</button>
+      </header>
+
+      <section id="timelineGrid" class="timeline-grid" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div id="uploadModal" class="modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <header class="modal-head">
+        <h3>发布游记卡片</h3>
+        <button class="icon-btn" type="button" data-close="uploadModal">关闭</button>
+      </header>
+      <form id="uploadForm" class="form-grid">
+        <label>上传者
+          <input name="author" maxlength="80" required placeholder="例如：林舟">
+        </label>
+        <label>相册名
+          <input name="album" maxlength="80" required placeholder="例如：北欧海岸">
+        </label>
+        <label>标题
+          <input name="title" maxlength="120" required placeholder="例如：港口晨雾">
+        </label>
+        <label>地点
+          <input name="location" maxlength="120" required placeholder="例如：丹麦 · 奥胡斯">
+        </label>
+        <label>日期
+          <input name="travelDate" type="date" required>
+        </label>
+        <label>图片
+          <input name="image" type="file" accept="image/*" required>
+        </label>
+        <label class="full">编辑密钥（至少 8 位）
+          <input name="editKey" type="password" minlength="8" maxlength="64" required placeholder="后续编辑这条记录时要用到">
+        </label>
+        <p class="full form-tip">请保存好编辑密钥。系统不会显示明文，丢失后无法编辑该记录。</p>
+        <label class="full">笔记
+          <textarea name="note" rows="4" maxlength="1500" required placeholder="记录这段旅程的感受"></textarea>
+        </label>
+        <div class="full actions">
+          <button class="btn btn-primary" type="submit">发布</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="entryModal" class="modal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-wide">
+      <header class="modal-head">
+        <h3 id="entryModalTitle">记录详情</h3>
+        <button class="icon-btn" type="button" data-close="entryModal">关闭</button>
+      </header>
+
+      <div class="entry-layout">
+        <section class="entry-pane">
+          <img id="detailImage" class="detail-image" alt="">
+          <p id="detailMeta" class="detail-meta"></p>
+          <p id="detailNote" class="detail-note"></p>
+
+          <form id="editForm" class="form-grid subtle">
+            <h4>编辑记录</h4>
+            <label>上传者
+              <input name="author" maxlength="80" required>
+            </label>
+            <label>相册名
+              <input name="album" maxlength="80" required>
+            </label>
+            <label>标题
+              <input name="title" maxlength="120" required>
+            </label>
+            <label>地点
+              <input name="location" maxlength="120" required>
+            </label>
+            <label>日期
+              <input name="travelDate" type="date" required>
+            </label>
+            <label class="full">当前编辑密钥
+              <input name="currentEditKey" type="password" minlength="8" maxlength="64" required placeholder="输入你创建该记录时设置的密钥">
+            </label>
+            <label class="full">新编辑密钥（可选）
+              <input name="nextEditKey" type="password" minlength="8" maxlength="64" placeholder="不填则保持原密钥">
+            </label>
+            <label class="full">笔记
+              <textarea name="note" rows="4" maxlength="1500" required></textarea>
+            </label>
+            <div class="full actions">
+              <button class="btn btn-primary" type="submit">保存修改</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="comment-pane">
+          <h4>评论</h4>
+          <ul id="commentList" class="comment-list"></ul>
+          <form id="commentForm" class="comment-form">
+            <label>昵称
+              <input name="commenter" maxlength="80" required placeholder="你的名字">
+            </label>
+            <label>评论内容
+              <textarea name="content" rows="3" maxlength="800" required placeholder="写下你的想法"></textarea>
+            </label>
+            <button class="btn btn-secondary" type="submit">发表评论</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/script.js"></script>
+</body>
+</html>
