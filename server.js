@@ -27,7 +27,13 @@ app.disable("x-powered-by");
 
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        imgSrc: ["'self'", "data:", "https:"]
+      }
+    }
   })
 );
 app.use(compression());
