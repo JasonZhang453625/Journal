@@ -31,7 +31,8 @@ app.use(
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
-        imgSrc: ["'self'", "data:", "https:"]
+        imgSrc: ["'self'", "data:", "https:"],
+        upgradeInsecureRequests: config.cspUpgradeInsecureRequests ? [] : null
       }
     }
   })
@@ -598,6 +599,7 @@ function buildConfig() {
     maxUploadMb: toNumber(process.env.MAX_UPLOAD_MB, 15),
     maxJsonMb: toNumber(process.env.MAX_JSON_MB, 1),
     trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
+    cspUpgradeInsecureRequests: parseBoolean(process.env.CSP_UPGRADE_INSECURE_REQUESTS, false),
     rateLimitWindowMs: toNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
     rateLimitRead: toNumber(process.env.RATE_LIMIT_READ, 300),
     rateLimitWrite: toNumber(process.env.RATE_LIMIT_WRITE, 80),
