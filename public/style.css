@@ -80,6 +80,33 @@ body {
   gap: 26px;
   min-height: 100vh;
   padding: 24px;
+  overflow-x: clip;
+  transition: grid-template-columns 240ms ease, gap 240ms ease;
+}
+
+.featurebar-toggle {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 6;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink-0);
+  cursor: pointer;
+  background: rgba(255, 253, 247, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 24px rgba(15, 33, 30, 0.13);
+}
+
+.sidebar-head h2 {
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-1);
 }
 
 .sidebar,
@@ -95,10 +122,26 @@ body {
   position: sticky;
   top: 24px;
   height: calc(100vh - 48px);
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  will-change: transform, opacity;
+  transition: opacity 280ms ease, transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.app-shell.featurebar-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+  gap: 0;
+}
+
+.app-shell.featurebar-collapsed .sidebar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(-100% - 28px));
 }
 
 .eyebrow {
@@ -262,6 +305,13 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.app-shell.featurebar-toggling .entry-card,
+.app-shell.featurebar-toggling .entry-card * {
+  transition: none !important;
 }
 
 .card-badges {
@@ -334,14 +384,21 @@ body {
 .modal {
   position: fixed;
   inset: 0;
-  display: none;
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   background: rgba(10, 20, 18, 0.48);
   z-index: 10;
   padding: 20px;
+  transition: opacity 220ms ease, visibility 0s linear 220ms;
 }
 
 .modal.open {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .modal-dialog {
@@ -355,6 +412,14 @@ body {
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-lg);
   padding: 16px;
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
+  transition: opacity 220ms ease, transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.modal.open .modal-dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .modal-dialog-wide {
@@ -558,9 +623,25 @@ body {
     gap: 14px;
   }
 
+  .featurebar-toggle {
+    top: 14px;
+    left: 14px;
+  }
+
   .sidebar {
     position: static;
     height: auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .app-shell.featurebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell.featurebar-collapsed .sidebar {
+    display: none;
   }
 
   .entry-card.wide {

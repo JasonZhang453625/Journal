@@ -1,18 +1,25 @@
 const ALL_FILTER = "__ALL__";
 const EDIT_KEY_STORE = "travel_edit_keys_v1";
+const FEATURE_BAR_COLLAPSED_STORE = "feature_bar_collapsed_v1";
 
 const state = {
   authors: [],
   albums: [],
+  regions: [],
+  rawEntries: [],
   entries: [],
   activeAuthor: ALL_FILTER,
   activeAlbum: ALL_FILTER,
+  activeRegion: ALL_FILTER,
   selectedEntry: null,
   revealObserver: null
 };
 
+const appShellEl = document.querySelector("#appShell");
+const featureBarToggleBtnEl = document.querySelector("#featureBarToggleBtn");
 const authorChipsEl = document.querySelector("#authorChips");
 const albumListEl = document.querySelector("#albumList");
+const regionChipsEl = document.querySelector("#regionChips");
 const heroMetaEl = document.querySelector("#heroMeta");
 const timelineGridEl = document.querySelector("#timelineGrid");
 const openUploadBtnEl = document.querySelector("#openUploadBtn");
@@ -30,6 +37,7 @@ const toastEl = document.querySelector("#toast");
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" });
 let cachedEditKeys = loadEditKeys();
+let featureBarToggleTimer = null;
 
 init().catch((error) => {
   console.error(error);
@@ -37,11 +45,25 @@ init().catch((error) => {
 });
 
 function init() {
+  applyFeatureBarState(loadFeatureBarCollapsed());
   bindGlobalEvents();
   return refreshData();
 }
 
 function bindGlobalEvents() {
+  featureBarToggleBtnEl.addEventListener("click", () => {
+    appShellEl.classList.add("featurebar-toggling");
+    clearTimeout(featureBarToggleTimer);
+
+    const isCollapsed = !appShellEl.classList.contains("featurebar-collapsed");
+    applyFeatureBarState(isCollapsed);
+    saveFeatureBarCollapsed(isCollapsed);
+
+    featureBarToggleTimer = setTimeout(() => {
+      appShellEl.classList.remove("featurebar-toggling");
+    }, 320);
+  });
+
   openUploadBtnEl.addEventListener("click", () => openModal(uploadModalEl));
 
   document.querySelectorAll("[data-close]").forEach((button) => {
@@ -77,6 +99,11 @@ async function refreshData() {
   await loadAlbums();
   syncActiveAlbum();
   await loadEntries();
+  syncActiveRegion();
+  applyRegionFilter();
+  renderRegions();
+  renderHeroMeta();
+  renderTimeline();
 }
 
 function syncActiveAuthor() {
@@ -90,6 +117,13 @@ function syncActiveAlbum() {
   const names = state.albums.map((item) => item.album);
   if (state.activeAlbum !== ALL_FILTER && !names.includes(state.activeAlbum)) {
     state.activeAlbum = ALL_FILTER;
+  }
+}
+
+function syncActiveRegion() {
+  const names = state.regions.map((item) => item.region);
+  if (state.activeRegion !== ALL_FILTER && !names.includes(state.activeRegion)) {
+    state.activeRegion = ALL_FILTER;
   }
 }
 
@@ -115,9 +149,8 @@ async function loadEntries() {
   if (state.activeAlbum !== ALL_FILTER) {
     query.set("album", state.activeAlbum);
   }
-  state.entries = await fetchJSON(`/api/entries?${query.toString()}`);
-  renderHeroMeta();
-  renderTimeline();
+  state.rawEntries = await fetchJSON(`/api/entries?${query.toString()}`);
+  state.regions = buildRegionStats(state.rawEntries);
 }
 
 function renderAuthors() {
@@ -136,6 +169,7 @@ function renderAuthors() {
     button.addEventListener("click", async () => {
       state.activeAuthor = button.dataset.author;
       state.activeAlbum = ALL_FILTER;
+      state.activeRegion = ALL_FILTER;
       await refreshData();
     });
   });
@@ -156,19 +190,62 @@ function renderAlbums() {
   albumListEl.querySelectorAll(".album-btn").forEach((button) => {
     button.addEventListener("click", async () => {
       state.activeAlbum = button.dataset.album;
+      state.activeRegion = ALL_FILTER;
       renderAlbums();
       await loadEntries();
+      syncActiveRegion();
+      applyRegionFilter();
+      renderRegions();
+      renderHeroMeta();
+      renderTimeline();
     });
   });
 }
 
+function renderRegions() {
+  const total = state.regions.reduce((sum, item) => sum + item.count, 0);
+  const items = [{ region: ALL_FILTER, count: total }, ...state.regions];
+
+  regionChipsEl.innerHTML = items
+    .map((item) => {
+      const activeClass = item.region === state.activeRegion ? "active" : "";
+      const label = item.region === ALL_FILTER ? "\u5168\u90e8" : item.region;
+      return `<button class="chip ${activeClass}" data-region="${escapeAttr(item.region)}">${escapeHtml(label)} \u00b7 ${item.count}</button>`;
+    })
+    .join("");
+
+  regionChipsEl.querySelectorAll(".chip").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeRegion = button.dataset.region;
+      applyRegionFilter();
+      renderRegions();
+      renderHeroMeta();
+      renderTimeline();
+    });
+  });
+}
+
+function applyRegionFilter() {
+  if (state.activeRegion === ALL_FILTER) {
+    state.entries = state.rawEntries.slice();
+    return;
+  }
+  state.entries = state.rawEntries.filter((entry) => {
+    const regionInfo = extractRegionInfo(entry.location);
+    return regionInfo.region === state.activeRegion;
+  });
+}
+
 function renderHeroMeta() {
-  const fragments = [`共 ${state.entries.length} 条记录`];
+  const fragments = [`\u5171 ${state.entries.length} \u6761\u8bb0\u5f55`];
   if (state.activeAuthor !== ALL_FILTER) {
-    fragments.push(`作者：${state.activeAuthor}`);
+    fragments.push(`\u4f5c\u8005\uff1a${state.activeAuthor}`);
   }
   if (state.activeAlbum !== ALL_FILTER) {
-    fragments.push(`相册：${state.activeAlbum}`);
+    fragments.push(`\u76f8\u518c\uff1a${state.activeAlbum}`);
+  }
+  if (state.activeRegion !== ALL_FILTER) {
+    fragments.push(`\u5730\u533a\uff1a${state.activeRegion}`);
   }
   heroMetaEl.textContent = fragments.join(" | ");
 }
@@ -380,6 +457,11 @@ async function submitCommentForm(event) {
     showToast("评论已发布。");
     await loadComments(state.selectedEntry.id);
     await loadEntries();
+    syncActiveRegion();
+    applyRegionFilter();
+    renderRegions();
+    renderHeroMeta();
+    renderTimeline();
   } catch (error) {
     showToast(error.message || "评论失败");
   } finally {
@@ -400,6 +482,90 @@ function closeModal(modalEl) {
   if (!document.querySelector(".modal.open")) {
     document.body.style.overflow = "";
   }
+}
+
+function applyFeatureBarState(isCollapsed) {
+  appShellEl.classList.toggle("featurebar-collapsed", isCollapsed);
+  featureBarToggleBtnEl.setAttribute("aria-expanded", String(!isCollapsed));
+  featureBarToggleBtnEl.textContent = isCollapsed ? "\u5c55\u5f00\u529f\u80fd\u680f" : "\u6536\u8d77\u529f\u80fd\u680f";
+}
+
+function loadFeatureBarCollapsed() {
+  try {
+    return localStorage.getItem(FEATURE_BAR_COLLAPSED_STORE) === "1";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function saveFeatureBarCollapsed(isCollapsed) {
+  try {
+    localStorage.setItem(FEATURE_BAR_COLLAPSED_STORE, isCollapsed ? "1" : "0");
+  } catch (_error) {
+    // Ignore storage failures.
+  }
+}
+
+function buildRegionStats(entries) {
+  const counter = new Map();
+  entries.forEach((entry) => {
+    const regionInfo = extractRegionInfo(entry.location);
+    const prev = counter.get(regionInfo.region) || 0;
+    counter.set(regionInfo.region, prev + 1);
+  });
+
+  return [...counter.entries()]
+    .map(([region, count]) => ({ region, count }))
+    .sort((a, b) => b.count - a.count || a.region.localeCompare(b.region, "zh-CN"));
+}
+
+function extractRegionInfo(locationValue) {
+  const location = String(locationValue || "").trim();
+  if (!location) {
+    return { region: "\u672a\u77e5\u5730\u533a" };
+  }
+
+  const provinces = [
+    "\u5317\u4eac", "\u5929\u6d25", "\u4e0a\u6d77", "\u91cd\u5e86", "\u6cb3\u5317", "\u5c71\u897f", "\u8fbd\u5b81", "\u5409\u6797",
+    "\u9ed1\u9f99\u6c5f", "\u6c5f\u82cf", "\u6d59\u6c5f", "\u5b89\u5fbd", "\u798f\u5efa", "\u6c5f\u897f", "\u5c71\u4e1c", "\u6cb3\u5357",
+    "\u6e56\u5317", "\u6e56\u5357", "\u5e7f\u4e1c", "\u6d77\u5357", "\u56db\u5ddd", "\u8d35\u5dde", "\u4e91\u5357", "\u9655\u897f",
+    "\u7518\u8083", "\u9752\u6d77", "\u53f0\u6e7e", "\u5185\u8499\u53e4", "\u5e7f\u897f", "\u897f\u85cf", "\u5b81\u590f", "\u65b0\u7586",
+    "\u9999\u6e2f", "\u6fb3\u95e8"
+  ];
+
+  const parts = location
+    .replace(/[\u00B7\u2022\u30FB,\uFF0C\u3001/|\\-]+/g, "|")
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const first = parts[0] || "";
+  const second = parts[1] || "";
+  const firstLower = first.toLowerCase();
+  const isChinaHead =
+    first === "\u4e2d\u56fd" ||
+    first === "\u4e2d\u570b" ||
+    first === "\u4e2d\u56fd\u5927\u9646" ||
+    firstLower === "china" ||
+    firstLower === "cn" ||
+    firstLower === "prc";
+
+  if (isChinaHead) {
+    const province = findProvinceName(second || location, provinces);
+    return { region: province || second || "\u4e2d\u56fd" };
+  }
+
+  const provinceFromText = findProvinceName(location, provinces);
+  if (provinceFromText) {
+    return { region: provinceFromText };
+  }
+
+  return { region: first || location };
+}
+
+function findProvinceName(text, provinces) {
+  const source = String(text || "");
+  return provinces.find((province) => source.includes(province)) || "";
 }
 
 function loadEditKeys() {

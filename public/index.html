@@ -14,8 +14,12 @@
   <div class="orb orb-a" aria-hidden="true"></div>
   <div class="orb orb-b" aria-hidden="true"></div>
 
-  <div class="app-shell">
-    <aside class="sidebar">
+  <div id="appShell" class="app-shell">
+    <button id="featureBarToggleBtn" class="featurebar-toggle" type="button" aria-expanded="true" aria-controls="featureBar">收起功能栏</button>
+    <aside id="featureBar" class="sidebar">
+      <div class="sidebar-head">
+        <h2>功能栏</h2>
+      </div>
       <div class="brand">
         <p class="eyebrow">PUBLIC TRAVEL LOG</p>
         <h1>远途札记</h1>
@@ -30,6 +34,11 @@
       <section class="filter-group">
         <h2>按相册筛选</h2>
         <div id="albumList" class="album-list"></div>
+      </section>
+
+      <section class="filter-group">
+        <h2>地区筛选</h2>
+        <div id="regionChips" class="chips"></div>
       </section>
 
       <div class="sidebar-foot">
