@@ -1,6 +1,7 @@
 const ALL_FILTER = "__ALL__";
 const EDIT_KEY_STORE = "travel_edit_keys_v1";
 const FEATURE_BAR_COLLAPSED_STORE = "feature_bar_collapsed_v1";
+const THEME_STORE = "travel_theme_v1";
 
 const state = {
   authors: [],
@@ -46,6 +47,7 @@ init().catch((error) => {
 });
 
 function init() {
+  applyTheme(loadTheme());
   applyFeatureBarState(loadFeatureBarCollapsed());
   bindGlobalEvents();
   return refreshData();
@@ -67,6 +69,10 @@ function bindGlobalEvents() {
 
   openUploadBtnEl.addEventListener("click", () => openModal(uploadModalEl));
   deleteEntryBtnEl.addEventListener("click", submitDeleteEntry);
+
+  document.querySelectorAll(".theme-chip").forEach((chip) => {
+    chip.addEventListener("click", () => applyTheme(chip.dataset.theme));
+  });
 
   document.querySelectorAll("[data-close]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -261,8 +267,9 @@ function renderTimeline() {
   timelineGridEl.innerHTML = state.entries
     .map((entry, index) => {
       const wideClass = entry.imageRatio >= 1.35 ? "wide" : "";
+      const ratio = Number.isFinite(entry.imageRatio) ? entry.imageRatio.toFixed(4) : "1.6";
       return `
-        <article class="entry-card ${wideClass}" data-id="${entry.id}" style="--delay: ${index * 50}ms">
+        <article class="entry-card ${wideClass}" data-id="${entry.id}" style="--delay: ${index * 50}ms; --img-ratio: ${ratio}">
           <div class="image-wrap">
             <img src="${escapeAttr(entry.imagePath)}" alt="${escapeAttr(entry.title)}" loading="lazy">
             <div class="card-badges">
@@ -530,7 +537,10 @@ function closeModal(modalEl) {
 function applyFeatureBarState(isCollapsed) {
   appShellEl.classList.toggle("featurebar-collapsed", isCollapsed);
   featureBarToggleBtnEl.setAttribute("aria-expanded", String(!isCollapsed));
-  featureBarToggleBtnEl.textContent = isCollapsed ? "\u5c55\u5f00\u529f\u80fd\u680f" : "\u6536\u8d77\u529f\u80fd\u680f";
+  const label = featureBarToggleBtnEl.querySelector(".toggle-label");
+  if (label) {
+    label.textContent = isCollapsed ? "\u5c55\u5f00" : "\u529f\u80fd\u680f";
+  }
 }
 
 function loadFeatureBarCollapsed() {
@@ -544,6 +554,28 @@ function loadFeatureBarCollapsed() {
 function saveFeatureBarCollapsed(isCollapsed) {
   try {
     localStorage.setItem(FEATURE_BAR_COLLAPSED_STORE, isCollapsed ? "1" : "0");
+  } catch (_error) {
+    // Ignore storage failures.
+  }
+}
+
+function loadTheme() {
+  try {
+    return localStorage.getItem(THEME_STORE) || "default";
+  } catch (_error) {
+    return "default";
+  }
+}
+
+function applyTheme(theme) {
+  const validThemes = ["default", "stars", "shinkai"];
+  const safe = validThemes.includes(theme) ? theme : "default";
+  document.documentElement.setAttribute("data-theme", safe === "default" ? "" : safe);
+  document.querySelectorAll(".theme-chip").forEach((chip) => {
+    chip.classList.toggle("active", chip.dataset.theme === safe);
+  });
+  try {
+    localStorage.setItem(THEME_STORE, safe);
   } catch (_error) {
     // Ignore storage failures.
   }

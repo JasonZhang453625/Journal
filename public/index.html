@@ -15,7 +15,10 @@
   <div class="orb orb-b" aria-hidden="true"></div>
 
   <div id="appShell" class="app-shell">
-    <button id="featureBarToggleBtn" class="featurebar-toggle" type="button" aria-expanded="true" aria-controls="featureBar">收起功能栏</button>
+    <button id="featureBarToggleBtn" class="featurebar-toggle" type="button" aria-expanded="true" aria-controls="featureBar">
+      <span class="toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="toggle-label">功能栏</span>
+    </button>
     <aside id="featureBar" class="sidebar">
       <div class="sidebar-head">
         <h2>功能栏</h2>
@@ -42,6 +45,14 @@
       </section>
 
       <div class="sidebar-foot">
+        <div class="theme-row">
+          <p class="theme-label">网站风格</p>
+          <div class="theme-chips">
+            <button class="theme-chip" data-theme="default" title="暖纸" style="background: linear-gradient(135deg,#be5333,#2f7468)"></button>
+            <button class="theme-chip" data-theme="stars" title="浩瘀星辰" style="background: linear-gradient(135deg,#7c5cfc,#38c5f8)"></button>
+            <button class="theme-chip" data-theme="shinkai" title="新海诵风" style="background: linear-gradient(135deg,#c85f08,#1a5ea8)"></button>
+          </div>
+        </div>
         <p>卡片可评论</p>
         <p>编辑需输入该记录的编辑密钥</p>
       </div>

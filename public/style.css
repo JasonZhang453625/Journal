@@ -86,19 +86,59 @@ body {
 
 .featurebar-toggle {
   position: fixed;
-  top: 24px;
-  left: 24px;
+  top: 16px;
+  left: 16px;
   z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 10px 14px;
+  border-radius: 14px;
+  padding: 9px 14px 9px 11px;
   font: inherit;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--ink-0);
   cursor: pointer;
-  background: rgba(255, 253, 247, 0.9);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 24px rgba(15, 33, 30, 0.13);
+  background: var(--panel-strong, rgba(255, 253, 247, 0.96));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 180ms ease, box-shadow 180ms ease,
+              background 320ms ease, border-color 320ms ease, color 320ms ease;
+}
+
+.featurebar-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.featurebar-toggle .toggle-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.featurebar-toggle .toggle-icon span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 260ms cubic-bezier(0.2,0.7,0.2,1),
+              opacity 200ms ease, width 260ms ease;
+}
+
+.featurebar-collapsed .featurebar-toggle .toggle-icon span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.featurebar-collapsed .featurebar-toggle .toggle-icon span:nth-child(2) {
+  opacity: 0;
+  width: 0;
+}
+.featurebar-collapsed .featurebar-toggle .toggle-icon span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 .sidebar-head h2 {
@@ -282,7 +322,6 @@ body {
 }
 
 .entry-card {
-  height: 410px;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid rgba(25, 34, 30, 0.1);
@@ -310,9 +349,15 @@ body {
   grid-column: span 2;
 }
 
+/* Image wrap: height driven by actual image aspect ratio via CSS var */
 .image-wrap {
   position: relative;
-  height: 56%;
+  width: 100%;
+  aspect-ratio: var(--img-ratio, 1.6);
+  min-height: 140px;
+  max-height: 460px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .image-wrap img {
@@ -346,11 +391,13 @@ body {
 }
 
 .entry-note {
-  height: 44%;
+  flex: 1;
+  min-height: 108px;
   padding: 13px 14px;
   display: flex;
   flex-direction: column;
   gap: 7px;
+  overflow: hidden;
 }
 
 .entry-head {
@@ -636,11 +683,12 @@ body {
     grid-template-columns: 1fr;
     padding: 14px;
     gap: 14px;
+    transition: gap 280ms ease;
   }
 
   .featurebar-toggle {
-    top: 14px;
-    left: 14px;
+    top: 12px;
+    left: 12px;
   }
 
   .sidebar {
@@ -649,19 +697,47 @@ body {
     width: auto;
     min-width: 0;
     max-width: none;
-    padding-top: 54px; /* room for the fixed featurebar-toggle button */
+    padding-top: 54px;
+    /* Animated collapse on mobile uses max-height */
+    overflow: hidden;
+    max-height: 1600px;
+    transition: max-height 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                padding 300ms ease,
+                opacity 260ms ease,
+                transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
   }
 
+  /* Override desktop grid collapse — mobile collapses via max-height instead */
   .app-shell.featurebar-collapsed {
     grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .app-shell.featurebar-collapsed .sidebar {
-    display: none;
+    display: block; /* keep in DOM for animation */
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-12px);
   }
 
   .entry-card.wide {
     grid-column: span 1;
+  }
+
+  .timeline-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-dialog {
+    max-height: calc(100dvh - 20px);
+    padding: 12px;
   }
 
   .entry-layout {
@@ -682,4 +758,147 @@ body {
   .detail-image {
     height: 240px;
   }
+
+  .timeline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .featurebar-toggle .toggle-label {
+    display: none;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Theme switcher component
+   ═══════════════════════════════════════ */
+.theme-row {
+  margin-bottom: 8px;
+}
+
+.theme-label {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+}
+
+.theme-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.theme-chip:hover {
+  transform: scale(1.12);
+}
+
+.theme-chip.active {
+  border-color: var(--ink-0);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.08), 0 3px 8px rgba(0,0,0,0.18);
+  transform: scale(1.08);
+}
+
+/* ═══════════════════════════════════════
+   Theme: 浩瀚星辰 (Starry cosmos)
+   ═══════════════════════════════════════ */
+[data-theme="stars"] {
+  --bg-0: #050914;
+  --bg-1: #081028;
+  --bg-2: #0b1535;
+  --ink-0: #dce8ff;
+  --ink-1: #6a84b0;
+  --line: rgba(100, 160, 255, 0.12);
+  --panel: rgba(8, 16, 42, 0.76);
+  --panel-strong: rgba(6, 12, 34, 0.94);
+  --accent-a: #7c5cfc;
+  --accent-b: #38c5f8;
+  --shadow-lg: 0 24px 52px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+[data-theme="stars"] body {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(124, 92, 252, 0.15) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(56, 197, 248, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(80, 40, 160, 0.18) 0%, transparent 45%),
+    linear-gradient(160deg, #050914, #081028 55%, #0b1535);
+}
+
+[data-theme="stars"] .orb-a {
+  background: #6030d8;
+  opacity: 0.22;
+  width: 480px;
+  height: 480px;
+}
+
+[data-theme="stars"] .orb-b {
+  background: #1060b8;
+  opacity: 0.2;
+  width: 520px;
+  height: 520px;
+}
+
+[data-theme="stars"] .badge {
+  background: rgba(56, 197, 248, 0.22);
+}
+
+/* ═══════════════════════════════════════
+   Theme: 新海诚 (Shinkai style)
+   ═══════════════════════════════════════ */
+[data-theme="shinkai"] {
+  --bg-0: #b8cee8;
+  --bg-1: #a0bedd;
+  --bg-2: #ecd8b8;
+  --ink-0: #102035;
+  --ink-1: #305570;
+  --line: rgba(16, 40, 80, 0.11);
+  --panel: rgba(255, 255, 255, 0.64);
+  --panel-strong: rgba(255, 255, 255, 0.84);
+  --accent-a: #c85f08;
+  --accent-b: #1a5ea8;
+  --shadow-lg: 0 24px 52px rgba(16, 40, 90, 0.2);
+}
+
+[data-theme="shinkai"] body {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 200, 100, 0.55) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 100%, rgba(26, 94, 168, 0.35) 0%, transparent 50%),
+    linear-gradient(182deg, #2a58b8 0%, #7aaee0 28%, #b8cee8 52%, #d0dcee 70%, #ecdcc8 100%);
+}
+
+[data-theme="shinkai"] .orb-a {
+  background: #f0a855;
+  opacity: 0.5;
+  top: 2%;
+  right: 15%;
+  width: 560px;
+  height: 260px;
+  filter: blur(72px);
+}
+
+[data-theme="shinkai"] .orb-b {
+  background: #3070c0;
+  opacity: 0.38;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 280px;
+  border-radius: 0;
+  filter: blur(56px);
+}
+
+[data-theme="shinkai"] .badge {
+  background: rgba(10, 30, 60, 0.52);
 }
