@@ -112,9 +112,7 @@ app.use(
   })
 );
 
-app.use("/api", readLimiter);
-
-app.get("/api/authors", (_req, res) => {
+app.get("/api/authors", readLimiter, (_req, res) => {
   const rows = db
     .prepare(
       `SELECT author, COUNT(*) AS count
@@ -126,7 +124,7 @@ app.get("/api/authors", (_req, res) => {
   res.json(rows);
 });
 
-app.get("/api/albums", (req, res) => {
+app.get("/api/albums", readLimiter, (req, res) => {
   const author = sanitizeText(req.query.author, 80);
   let sql = "SELECT album, COUNT(*) AS count FROM entries";
   const params = [];
@@ -141,7 +139,7 @@ app.get("/api/albums", (req, res) => {
   res.json(rows);
 });
 
-app.get("/api/entries", (req, res) => {
+app.get("/api/entries", readLimiter, (req, res) => {
   const author = sanitizeText(req.query.author, 80);
   const album = sanitizeText(req.query.album, 80);
   const where = [];
@@ -186,7 +184,7 @@ app.get("/api/entries", (req, res) => {
   res.json(rows);
 });
 
-app.get("/api/entries/:id/comments", (req, res) => {
+app.get("/api/entries/:id/comments", readLimiter, (req, res) => {
   const entryId = toPositiveInt(req.params.id);
   if (!entryId) {
     res.status(400).json({ error: "Invalid entry id." });
@@ -236,7 +234,7 @@ app.post("/api/entries", writeLimiter, uploadLimiter, upload.single("image"), (r
 
   let dimensions;
   try {
-    dimensions = imageSize(fs.readFileSync(req.file.path));
+    dimensions = imageSize(req.file.path);
   } catch (_error) {
     cleanupUploadedFile(req.file);
     res.status(400).json({ error: "Cannot parse image dimensions." });
@@ -400,6 +398,47 @@ app.put("/api/entries/:id", writeLimiter, (req, res) => {
   });
 });
 
+app.delete("/api/entries/:id", writeLimiter, (req, res) => {
+  const entryId = toPositiveInt(req.params.id);
+  if (!entryId) {
+    res.status(400).json({ error: "Invalid entry id." });
+    return;
+  }
+
+  const existing = db
+    .prepare("SELECT id, edit_key_hash AS editKeyHash, image_path AS imagePath FROM entries WHERE id = ?")
+    .get(entryId);
+  if (!existing) {
+    res.status(404).json({ error: "Entry not found." });
+    return;
+  }
+
+  const editKey = sanitizeText(req.body.editKey, 64);
+  if (!editKey) {
+    res.status(400).json({ error: "editKey is required for deletion." });
+    return;
+  }
+
+  const editKeyHash = hashEditKey(editKey, config.editKeyPepper);
+  if (!existing.editKeyHash || existing.editKeyHash !== editKeyHash) {
+    res.status(403).json({ error: "Invalid edit key." });
+    return;
+  }
+
+  db.prepare("DELETE FROM entries WHERE id = ?").run(entryId);
+
+  if (existing.imagePath && existing.imagePath.startsWith("/uploads/")) {
+    const filePath = path.join(config.uploadsDir, path.basename(existing.imagePath));
+    try {
+      fs.unlinkSync(filePath);
+    } catch (_error) {
+      // ignore cleanup errors
+    }
+  }
+
+  res.json({ success: true });
+});
+
 app.post("/api/entries/:id/comments", writeLimiter, (req, res) => {
   const entryId = toPositiveInt(req.params.id);
   if (!entryId) {
@@ -441,12 +480,8 @@ app.use((error, _req, res, _next) => {
     res.status(400).json({ error: `Upload failed: ${error.message}` });
     return;
   }
-  if (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error." });
-    return;
-  }
-  res.status(500).json({ error: "Unknown error." });
+  console.error(error);
+  res.status(500).json({ error: "Internal server error." });
 });
 
 app.use((_req, res) => {

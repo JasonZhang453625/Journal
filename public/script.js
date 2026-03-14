@@ -33,6 +33,7 @@ const detailImageEl = document.querySelector("#detailImage");
 const detailMetaEl = document.querySelector("#detailMeta");
 const detailNoteEl = document.querySelector("#detailNote");
 const entryModalTitleEl = document.querySelector("#entryModalTitle");
+const deleteEntryBtnEl = document.querySelector("#deleteEntryBtn");
 const toastEl = document.querySelector("#toast");
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" });
@@ -65,6 +66,7 @@ function bindGlobalEvents() {
   });
 
   openUploadBtnEl.addEventListener("click", () => openModal(uploadModalEl));
+  deleteEntryBtnEl.addEventListener("click", submitDeleteEntry);
 
   document.querySelectorAll("[data-close]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -316,7 +318,12 @@ function handleTimelineClick(event) {
 }
 
 async function openEntryModal(id) {
-  const entry = state.entries.find((item) => item.id === id);
+  // Fall back to rawEntries when an active region filter hides the entry
+  // (e.g. right after editing an entry that belongs to a filtered-out region)
+  let entry = state.entries.find((item) => item.id === id);
+  if (!entry) {
+    entry = state.rawEntries.find((item) => item.id === id);
+  }
   if (!entry) {
     throw new Error("记录不存在");
   }
@@ -429,6 +436,42 @@ async function submitEditForm(event) {
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = "保存修改";
+  }
+}
+
+async function submitDeleteEntry() {
+  if (!state.selectedEntry) {
+    return;
+  }
+
+  const editKey = editFormEl.currentEditKey.value.trim();
+  if (!editKey) {
+    showToast("请先在上方『当前编辑密钥』栏输入密钥，再执行删除。");
+    return;
+  }
+
+  if (!confirm(`确定要永久删除「${state.selectedEntry.title}」吗？\n此操作不可恢复，相关评论也将一并删除。`)) {
+    return;
+  }
+
+  deleteEntryBtnEl.disabled = true;
+  deleteEntryBtnEl.textContent = "删除中...";
+
+  try {
+    await fetchJSON(`/api/entries/${state.selectedEntry.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ editKey })
+    });
+    showToast("记录已删除。");
+    closeModal(entryModalEl);
+    state.selectedEntry = null;
+    await refreshData();
+  } catch (error) {
+    showToast(error.message || "删除失败");
+  } finally {
+    deleteEntryBtnEl.disabled = false;
+    deleteEntryBtnEl.textContent = "删除记录";
   }
 }
 
@@ -593,7 +636,12 @@ function rememberEditKey(entryId, editKey) {
 }
 
 function formatDate(dateInput) {
-  return dateFormatter.format(new Date(dateInput));
+  // Append T00:00:00 so the browser treats the date as local-time midnight
+  // rather than UTC midnight, preventing the date from showing one day early
+  // for users in UTC+N timezones.
+  const str = String(dateInput || "");
+  const normalized = str.includes("T") ? str : `${str}T00:00:00`;
+  return dateFormatter.format(new Date(normalized));
 }
 
 function formatDateTime(dateInput) {

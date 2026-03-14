@@ -27,17 +27,17 @@
       </div>
 
       <section class="filter-group">
-        <h2>按作者筛选</h2>
+        <h3>按作者筛选</h3>
         <div id="authorChips" class="chips"></div>
       </section>
 
       <section class="filter-group">
-        <h2>按相册筛选</h2>
+        <h3>按相册筛选</h3>
         <div id="albumList" class="album-list"></div>
       </section>
 
       <section class="filter-group">
-        <h2>地区筛选</h2>
+        <h3>地区筛选</h3>
         <div id="regionChips" class="chips"></div>
       </section>
 
@@ -139,7 +139,9 @@
             <label class="full">笔记
               <textarea name="note" rows="4" maxlength="1500" required></textarea>
             </label>
+            <p class="full form-tip">⚠️ 图片上传后无法修改。如需更换图片，请删除本记录后重新发布。</p>
             <div class="full actions">
+              <button class="btn btn-danger" type="button" id="deleteEntryBtn">删除记录</button>
               <button class="btn btn-primary" type="submit">保存修改</button>
             </div>
           </form>
